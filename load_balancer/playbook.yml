@@ -1,0 +1,45 @@
+
+---
+- hosts: all
+  become: true
+
+  tasks:
+
+   - name: Install Nginx
+     apt: name={{ item }} state=latest
+     with_items: 
+                - nginx
+
+   - name: Start Nginx
+     ansible.builtin.service:
+        name: nginx
+        state: started
+
+   - name: Sets Nginx conf file
+     template:
+       src: "files/nginx.conf.j2"
+       dest: "/etc/nginx/sites-available/balancer"
+
+   - name: Enables new site
+     file:
+       src: "/etc/nginx/sites-available/balancer"
+       dest: "/etc/nginx/sites-enabled/balancer"
+       state: link
+     notify: Restart Nginx
+  
+   - name: Removes "default" site
+     file:
+       path: "/etc/nginx/sites-enabled/default"
+       state: absent
+     notify: Reload Nginx
+
+  handlers:
+   - name: Reload Nginx
+     service:
+       name: nginx
+       state: reloaded
+
+   - name: Restart Nginx
+     service:
+       name: nginx
+       state: restarted
